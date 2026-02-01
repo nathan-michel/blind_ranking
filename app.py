@@ -5,11 +5,15 @@ import os
 import io 
 import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps 
+import datetime
 
 CATEGORIES = {
     "Sojasun 🌿": "sojasun_complet.csv",
     "Jeux de société 🎲": "bga_jeux_complet.csv",
 }
+
+aujourdhui = datetime.date.today()
+graine_du_jour = int(aujourdhui.strftime('%Y%m%d'))
 
 # Configuration de l'application
 st.set_page_config(page_title="Blind Ranker Custom", layout="centered")
@@ -119,25 +123,29 @@ def charger_liste_items(fichier_csv):
         st.error(f"Impossible de lire le fichier {fichier_csv}: {e}")
         return None
 
-def initialiser_jeu(items_df, nom_categorie):
+def initialiser_jeu(items_df, nom_categorie, seed=None):
     """Prépare le 'session_state' pour une nouvelle partie."""
     st.session_state.slots = {i: None for i in range(1, 11)}
     
     items_melanges = items_df.to_dict('records')
-    random.shuffle(items_melanges)
+    # Si une seed est fournie, on verrouille l'ordre du mélange
+    if seed is not None:
+        random.Random(seed).shuffle(items_melanges)
+    else:
+        random.shuffle(items_melanges) # Hasard total sinon
 
     st.session_state.items_a_placer = items_melanges
     st.session_state.index_actuel = 0
     st.session_state.categorie_active = nom_categorie
 
-def demarrer_partie(fichier_csv, nom_affichage):
+def demarrer_partie(fichier_csv, nom_affichage, seed=None):
     """Logique unique pour lancer n'importe quelle catégorie."""
     df_complet = charger_toute_la_liste(fichier_csv)
     if df_complet is not None:
         # On pioche 10 items au hasard
-        selection_10 = df_complet.sample(n=min(10, len(df_complet)))
+        selection_10 = df_complet.sample(n=min(10, len(df_complet)), random_state=seed)
         # On initialise le jeu avec cette sélection
-        initialiser_jeu(selection_10, nom_affichage)
+        initialiser_jeu(selection_10, nom_affichage, seed=seed)
         # On change de page
         st.session_state.page = "jeu"
         st.rerun()
@@ -150,25 +158,30 @@ def placer_item(numero_place):
 
 # --- FONCTIONS D'AFFICHAGE (PAGES) ---
 
-def afficher_page_selection():
-    st.title("Mon Blind Ranker Perso ! 🏆")
-    st.subheader("Choisissez une catégorie :")
-
-    # On parcourt le dictionnaire pour créer les boutons automatiquement
-    for nom, fichier in CATEGORIES.items():
-        if st.button(nom, use_container_width=True, type="primary"):
-            demarrer_partie(fichier, nom)
 
 def afficher_page_selection():
-    """Affiche le menu principal de sélection des catégories."""
+
     st.title("Mon Blind Ranker Perso ! 🏆")
-    st.subheader("Choisissez une catégorie pour commencer :")
+    
+    # --- SECTION DAILY ---
+    st.subheader("📅 Le Défi du Jour")
+    st.write(f"Même liste pour tout le monde ! (Date : {datetime.date.today().strftime('%d/%m/%Y')})")
+    
+    # On utilise la graine du jour pour les jeux de société
+    if st.button("JEUX DE SOCIÉTÉ : DAILY CHALLENGE 🔥", use_container_width=True, type="primary"):
+        demarrer_partie("bga_jeux_complet.csv", "Daily Jeux de Société 📅", seed=graine_du_jour)
 
+    st.write("---")
 
-    # On parcourt le dictionnaire pour créer les boutons automatiquement
+    # --- SECTION CLASSIQUE ---
+    st.subheader("🚀 Catégories Libres")
+    
+    # On définit nos catégories classiques
+
     for nom, fichier in CATEGORIES.items():
-        if st.button(nom, use_container_width=True, type="primary"):
-            demarrer_partie(fichier, nom)
+        if st.button(nom, use_container_width=True):
+            # Ici on ne passe pas de seed, donc c'est du pur hasard
+            demarrer_partie(fichier, nom)            
 
 def afficher_page_jeu():
     """Affiche l'interface du jeu (classement)."""
