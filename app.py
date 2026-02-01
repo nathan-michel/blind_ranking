@@ -17,6 +17,104 @@ graine_du_jour = int(aujourdhui.strftime('%Y%m%d'))
 
 # Configuration de l'application
 st.set_page_config(page_title="BLIND RANKING CLUB MARRAKECH", layout="centered")
+# Injection CSS dans app.py
+st.markdown("""
+    <style>
+        /* 1. SUPPRESSION DU SUPERFLU (Header, Menu, Footer) */
+        header {visibility: hidden;}
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        .stDeployButton {display:none;}
+
+        /* 2. OPTIMISATION DE L'ESPACE (Mobile First) */
+        .block-container {
+            padding-top: 2rem !important;
+            padding-bottom: 1rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            max-width: 800px; /* Centre le contenu sur PC */
+        }
+
+        /* 3. STYLE DES BOUTONS (Général) */
+        div.stButton > button {
+            width: 100%;
+            border-radius: 12px;
+            height: 3.5em; /* Plus facile à cliquer au pouce */
+            font-size: 16px !important;
+            font-weight: 600;
+            border: 1px solid #D1D5DB;
+            transition: all 0.2s;
+        }
+
+        /* 4. FIX POUR LE CENTRAGE ET L'APPARENCE DES BOUTONS REMPLIS (Désactivés) */
+        /* On force l'opacité et la couleur pour que ce soit lisible */
+        button[disabled] {
+            opacity: 1 !important;
+            color: #1E1E2E !important; /* Texte bien noir/bleu nuit */
+            background-color: #F0F2F6 !important; /* Fond gris très clair */
+            border: 1px solid #D1D5DB !important;
+            cursor: default !important;
+            box-shadow: none !important;
+        }
+        
+        /* Assure que le texte à l'intérieur du bouton désactivé reste centré */
+        button[disabled] p {
+            color: #1E1E2E !important;
+            text-align: center !important;
+            width: 100%;
+        }
+
+        /* 5. ADAPTATION DES TITRES SUR MOBILE */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem !important;
+                text-align: center;
+            }
+            h2, h3 {
+                font-size: 1.2rem !important;
+                text-align: center;
+            }
+            /* Réduction légère de la taille du texte dans les boutons sur petit écran */
+            div.stButton > button {
+                font-size: 14px !important;
+            }
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+## Injection de CSS pour le mobile
+#st.markdown("""
+#    
+#    <style>
+#        /* Supprimer les marges excessives en haut */
+#        .block-container {
+#            padding-top: 1rem;
+#            padding-bottom: 0rem;
+#            padding-left: 1rem;
+#            padding-right: 1rem;
+#        }
+#        
+#        /* Rendre les titres plus compacts sur mobile */
+#        h1 {
+#            font-size: 1.8rem !important;
+#            text-align: center;
+#        }
+#        
+#        /* Styliser les boutons de classement pour qu'ils soient plus grands (tactile) */
+#        div.stButton > button {
+#            border-radius: 10px;
+#            height: 3em;
+#            font-size: 16px !important;
+#            margin-bottom: -10px;
+#        }
+#        
+#        /* Cacher le menu Streamlit et le footer par défaut pour gagner de la place */
+#        #MainMenu {visibility: hidden;}
+#        footer {visibility: hidden;}
+#        header {visibility: hidden;}
+#    </style>
+#""", unsafe_allow_html=True)
+
 
 # --- NOUVELLE FONCTION ---
 @st.cache_data
@@ -205,10 +303,10 @@ def placer_item(numero_place):
 
 def afficher_page_selection():
 
-    st.title("BLIND RANKING CLUB MARRAKECH ! 🏆")
+    st.title("BLIND RANKING CLUB MARRAKECH ! 🏆", anchor=False)
     
     # --- SECTION DAILY ---
-    st.subheader("📅 Le Défi du Jour")
+    st.subheader("📅 Le Défi du Jour", anchor=False)
     st.write(f"Même liste pour tout le monde ! (Date : {datetime.date.today().strftime('%d/%m/%Y')})")
     
     # On utilise la graine du jour pour les jeux de société
@@ -218,7 +316,7 @@ def afficher_page_selection():
     st.write("---")
 
     # --- SECTION CLASSIQUE ---
-    st.subheader("🚀 Catégories Libres")
+    st.subheader("🚀 Catégories Libres", anchor=False)
     
     # On définit nos catégories classiques
 
@@ -235,14 +333,14 @@ def afficher_page_jeu():
         st.rerun()
 
     if st.session_state.index_actuel >= len(st.session_state.items_a_placer):
-        st.header("🎉 C'est terminé ! 🎉")
-        st.write("Voici votre classement final :")
-        
-        for i in range(1, 11):
-            st.success(f"**{i}.** {st.session_state.slots[i]['Item']}") 
-
-        st.write("---")
-        st.subheader("Partager votre résultat")
+        st.header("🎉 C'est terminé ! 🎉", anchor=False)
+        #st.write("Voici votre classement final :")
+        #
+        #for i in range(1, 11):
+        #    st.success(f"**{i}.** {st.session_state.slots[i]['Item']}") 
+#
+        #st.write("---")
+        st.subheader("Partager votre résultat", anchor=False)
 
         final_slots = st.session_state.slots
         texte_resultat = generer_texte_classement(final_slots)
@@ -277,7 +375,7 @@ def afficher_page_jeu():
 
         item_actuel = st.session_state.items_a_placer[st.session_state.index_actuel]
         
-        st.header(f"Placez cet item :")
+        st.header(f"Placez cet item :", anchor=False)
         
         # Charger et redimensionner l'image, cela retourne des bytes PNG ou l'URL
         image_data_or_url = charger_et_redimensionner_image(item_actuel['ImageURL'], max_hauteur=300) # Hauteur max ajustée à 300px pour tester
@@ -294,20 +392,42 @@ def afficher_page_jeu():
         else: 
             st.image(image_data_or_url, width=MAX_DISPLAY_WIDTH) # Utilisez width ici aussi
         
-        st.title(f"{item_actuel['Item']}")
+        st.title(f"{item_actuel['Item']}", anchor=False)
         
+
+        # --- DANS afficher_page_jeu() ---
+
         st.write("---")
-        st.subheader("Votre classement actuel :")
+        st.subheader("Votre classement actuel :", anchor=False)
+
+        # On crée deux colonnes pour que les boutons soient côte à côte (5 à gauche, 5 à droite)
+        col1, col2 = st.columns(2)
 
         for i in range(1, 11):
-            place = st.session_state.slots[i]
-            
-            if place is None:
-                if st.button(f"**{i}.** ❓ ... *Placer ici* ❓", key=f"slot_{i}", use_container_width=True):
-                    placer_item(i)
-                    st.rerun()
-            else:
-                st.info(f"**{i}.** {place['Item']}") 
+            # On alterne entre col1 et col2
+            cible_col = col1 if i <= 5 else col2
+
+            with cible_col:
+                place = st.session_state.slots[i]
+                if place is None:
+                    if st.button(f"**{i}.** ❓ ... *Placer ici* ❓", key=f"slot_{i}", use_container_width=True):
+                        placer_item(i)
+                        st.rerun()
+                else:
+                    st.button(f"**{i}.** {place['Item']}", key=f"filled_{i}", use_container_width=True, disabled=True)
+
+        #st.write("---")
+        #st.subheader("Votre classement actuel :", anchor=False)
+#
+        #for i in range(1, 11):
+        #    place = st.session_state.slots[i]
+        #    
+        #    if place is None:
+        #        if st.button(f"**{i}.** ❓ ... *Placer ici* ❓", key=f"slot_{i}", use_container_width=True):
+        #            placer_item(i)
+        #            st.rerun()
+        #    else:
+        #        st.info(f"**{i}.** {place['Item']}") 
 
 # --- ROUTEUR PRINCIPAL DE L'APPLICATION ---
 if 'page' not in st.session_state:
