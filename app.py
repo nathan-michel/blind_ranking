@@ -18,8 +18,35 @@ graine_du_jour = int(aujourdhui.strftime('%Y%m%d'))
 # Configuration de l'application
 st.set_page_config(page_title="BLIND RANKING CLUB MARRAKECH", layout="centered")
 # Injection CSS dans app.py
-st.markdown("""
+st.markdown("""       
     <style>
+        /* 1. RÉSERVATION D'ESPACE (Ratio 5:3) */
+        /* On force le conteneur à avoir une hauteur proportionnelle à sa largeur */
+        [data-testid="stImage"] {
+            background-color: white;
+            border-radius: 10px;
+            /* On fixe la hauteur pour éviter le "saut" au chargement */
+            min-height: 200px; 
+            max-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        /* 2. STABILISATION DU TITRE */
+        /* On donne une hauteur minimale au titre de l'item pour éviter qu'il ne bouge */
+        .item-title-container {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: left;
+            text-align: center;
+        }
+
+        /* 3. MASQUER LES ÉLÉMENTS STREAMLIT ET ANCRES */
+        header, footer, .stDeployButton, a.anchor-link { display:none !important; }
+
         /* 1. SUPPRESSION DU SUPERFLU (Header, Menu, Footer) */
         header {visibility: hidden;}
         #MainMenu {visibility: hidden;}
@@ -79,6 +106,54 @@ st.markdown("""
                 font-size: 14px !important;
             }
         }
+
+
+        /* 5. Images pas en full screen */    
+        button[title="View fullscreen"]{
+            visibility: hidden;
+        }
+            
+
+        /* 1. SUPPRESSION TOTALE DES MARGES SUPÉRIEURES */
+        .block-container {
+            padding-top: 0.5rem !important;
+            padding-bottom: 0rem !important;
+            max-width: 600px;
+        }
+
+        /* 2. RÉDUCTION DES ESPACES ENTRE TOUS LES ÉLÉMENTS (Vertical Block) */
+        [data-testid="stVerticalBlock"] {
+            gap: 0.5rem !important;
+        }
+
+        /* 3. STABILISATION ET CADRE IMAGE COMPACT */
+        [data-testid="stImage"] {
+            background-color: white;
+            border-radius: 12px;
+            min-height: 180px; /* Réduit pour gagner de la place */
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* 4. TITRES ET TEXTES COMPACTS */
+        .item-title-container {
+            min-height: 50px; /* Divisé par 2 */
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        h1 { font-size: 1.4rem !important; margin: 0 !important; }
+        h2, h3 { font-size: 1.1rem !important; margin: 0 !important; }
+
+        /* 5. BOUTONS DE CLASSEMENT SERRÉS */
+        div.stButton > button {
+            border-radius: 8px;
+            height: 2.8em !important; /* Plus fin */
+            margin-bottom: -10px !important;
+        }
+
+        /* Masquer les ancres et le superflu */
+        header, footer, .stDeployButton, a.anchor-link { display: none !important; }
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -116,7 +191,29 @@ st.markdown("""
 #""", unsafe_allow_html=True)
 
 
-# --- NOUVELLE FONCTION ---
+
+
+#@st.cache_data
+#def charger_et_redimensionner_image(url, cible_w=500, cible_h=300):
+#    """Télécharge et force l'image dans un canevas de taille fixe."""
+#    try:
+#        response = requests.get(url, timeout=10)
+#        response.raise_for_status()
+#        img = Image.open(io.BytesIO(response.content)).convert("RGB")
+#        
+#        # ImageOps.pad redimensionne et centre l'image dans le rectangle cible
+#        # sans la déformer et en ajoutant des bordures si nécessaire.
+#        img_fixed = ImageOps.pad(img, (cible_w, cible_h), color="white")
+#        
+#        img_byte_arr = io.BytesIO()
+#        img_fixed.save(img_byte_arr, format='PNG')
+#        return img_byte_arr.getvalue()
+#    except Exception as e:
+#        # En cas d'erreur, on crée un rectangle blanc vide de la même taille
+#        img_error = Image.new('RGB', (cible_w, cible_h), color="white")
+#        buf = io.BytesIO()
+#        img_error.save(buf, format='PNG')
+#        return buf.getvalue()
 @st.cache_data
 def charger_et_redimensionner_image(url, max_hauteur=400):
     """
@@ -359,6 +456,8 @@ def afficher_page_jeu():
 
         with tab2:
             st.image(image_resultat_bytes, caption="Aperçu de votre classement")
+            for i in range (45):
+                st.write("")
             st.download_button(
                 label="📥 Télécharger en .png",
                 data=image_resultat_bytes,
@@ -378,12 +477,12 @@ def afficher_page_jeu():
         st.header(f"Placez cet item :", anchor=False)
         
         # Charger et redimensionner l'image, cela retourne des bytes PNG ou l'URL
-        image_data_or_url = charger_et_redimensionner_image(item_actuel['ImageURL'], max_hauteur=300) # Hauteur max ajustée à 300px pour tester
+        image_data_or_url = charger_et_redimensionner_image(item_actuel['ImageURL'])#, max_hauteur=300) # Hauteur max ajustée à 300px pour tester
         
         # Définir une largeur maximale d'affichage dans Streamlit
         # Cela forcera Streamlit à afficher l'image à cette largeur,
         # en conservant son ratio (car l'objet PIL a déjà été redimensionné ou Streamlit gère l'URL).
-        MAX_DISPLAY_WIDTH = 100 # Par exemple, afficher à 100 pixels de large
+        MAX_DISPLAY_WIDTH = 120 # Par exemple, afficher à 100 pixels de large
 
         # Si c'est des bytes (image redimensionnée), on l'affiche directement
         if isinstance(image_data_or_url, bytes):
@@ -392,11 +491,15 @@ def afficher_page_jeu():
         else: 
             st.image(image_data_or_url, width=MAX_DISPLAY_WIDTH) # Utilisez width ici aussi
         
-        st.title(f"{item_actuel['Item']}", anchor=False)
+        st.markdown(f"""
+            <div class="item-title-container">
+                <h1 style="margin:0; padding:0;">{item_actuel['Item']}</h1>
+            </div>
+        """, unsafe_allow_html=True)
+        #st.title(f"{item_actuel['Item']}", anchor=False)
         
 
         # --- DANS afficher_page_jeu() ---
-
         st.write("---")
         st.subheader("Votre classement actuel :", anchor=False)
 
