@@ -1,11 +1,15 @@
-# app.py
 import streamlit as st
 import random
 import pandas as pd
 import os
 import io 
-import requests # <-- Import nécessaire
-from PIL import Image, ImageDraw, ImageFont, ImageOps # <-- ImageOps ajouté (au cas où, même si LANCZOS est dans Image)
+import requests
+from PIL import Image, ImageDraw, ImageFont, ImageOps 
+
+CATEGORIES = {
+    "Sojasun 🌿": "sojasun_complet.csv",
+    "Jeux de société 🎲": "bga_jeux_complet.csv",
+}
 
 # Configuration de l'application
 st.set_page_config(page_title="Blind Ranker Custom", layout="centered")
@@ -30,12 +34,10 @@ def charger_et_redimensionner_image(url, max_hauteur=400):
             new_width = int(width * ratio)
             img = img.resize((new_width, max_hauteur), Image.LANCZOS)
         
-        # --- MODIFICATION ICI ---
         # Convertir l'objet Image PIL redimensionné en bytes PNG
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, format='PNG')
         return img_byte_arr.getvalue()
-        # --- FIN MODIFICATION ---
     
     except Exception as e:
         print(f"Erreur lors du chargement/redimensionnement de l'image {url}: {e}")
@@ -86,29 +88,33 @@ def generer_image_classement(slots):
 # --- FONCTIONS DE LOGIQUE DU JEU ---
 
 @st.cache_data
-def charger_liste_items(fichier_csv, selection_aleatoire=False):
+def charger_toute_la_liste(fichier_csv):
+    """Charge l'intégralité du fichier CSV en cache."""
+    if not os.path.exists(fichier_csv):
+        st.error(f"Erreur : Le fichier {fichier_csv} est introuvable.")
+        return None
+    try:
+        df = pd.read_csv(fichier_csv)
+        placeholder_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/681px-Placeholder_view_vector.svg.png"
+        df["ImageURL"].fillna(placeholder_url, inplace=True)
+        return df
+    except Exception as e:
+        st.error(f"Impossible de lire le fichier {fichier_csv}: {e}")
+        return None
+    
+@st.cache_data
+def charger_liste_items(fichier_csv):
     """Charge un DataFrame (Nom + URL) depuis un fichier CSV."""
     if not os.path.exists(fichier_csv):
         st.error(f"Erreur : Le fichier {fichier_csv} est introuvable.")
         return None
     try:
         df = pd.read_csv(fichier_csv)
-        if "Item" not in df.columns or "ImageURL" not in df.columns:
-            st.error(f"Erreur : Le CSV doit avoir les colonnes 'Item' et 'ImageURL'.")
-            return None
         
         placeholder_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/681px-Placeholder_view_vector.svg.png"
         df["ImageURL"].fillna(placeholder_url, inplace=True)
 
-        if selection_aleatoire:
-            if len(df) < 10:
-                st.warning(f"Attention : {fichier_csv} a moins de 10 items.")
-                return None
-            return df.sample(n=10) 
-        else:
-            if len(df) != 10:
-                st.warning(f"Attention : {fichier_csv} ne contient pas 10 items.")
-            return df.head(10) 
+        return df
     except Exception as e:
         st.error(f"Impossible de lire le fichier {fichier_csv}: {e}")
         return None
@@ -117,11 +123,24 @@ def initialiser_jeu(items_df, nom_categorie):
     """Prépare le 'session_state' pour une nouvelle partie."""
     st.session_state.slots = {i: None for i in range(1, 11)}
     
-    items_melanges = items_df.sample(frac=1).to_dict('records')
-    
+    items_melanges = items_df.to_dict('records')
+    random.shuffle(items_melanges)
+
     st.session_state.items_a_placer = items_melanges
     st.session_state.index_actuel = 0
     st.session_state.categorie_active = nom_categorie
+
+def demarrer_partie(fichier_csv, nom_affichage):
+    """Logique unique pour lancer n'importe quelle catégorie."""
+    df_complet = charger_toute_la_liste(fichier_csv)
+    if df_complet is not None:
+        # On pioche 10 items au hasard
+        selection_10 = df_complet.sample(n=min(10, len(df_complet)))
+        # On initialise le jeu avec cette sélection
+        initialiser_jeu(selection_10, nom_affichage)
+        # On change de page
+        st.session_state.page = "jeu"
+        st.rerun()
 
 def placer_item(numero_place):
     """Assigne l'item actuel (dict) à la place choisie."""
@@ -131,33 +150,25 @@ def placer_item(numero_place):
 
 # --- FONCTIONS D'AFFICHAGE (PAGES) ---
 
-# (Remplacez votre ancienne fonction afficher_page_selection par celle-ci)
+def afficher_page_selection():
+    st.title("Mon Blind Ranker Perso ! 🏆")
+    st.subheader("Choisissez une catégorie :")
+
+    # On parcourt le dictionnaire pour créer les boutons automatiquement
+    for nom, fichier in CATEGORIES.items():
+        if st.button(nom, use_container_width=True, type="primary"):
+            demarrer_partie(fichier, nom)
 
 def afficher_page_selection():
     """Affiche le menu principal de sélection des catégories."""
     st.title("Mon Blind Ranker Perso ! 🏆")
     st.subheader("Choisissez une catégorie pour commencer :")
 
-    # --- NOUVELLE CATÉGORIE ---
-    if st.button("Sojasun 🌿 (10 au hasard)", use_container_width=True, type="primary"):
-        
-        # --- MODIFICATION ICI ---
-        # On lit le nouveau fichier CSV qui contient les URLs
-        items_df = charger_liste_items("sojasun_complet.csv", selection_aleatoire=True) 
-        # --- FIN MODIFICATION ---
-        
-        if items_df is not None:
-            initialiser_jeu(items_df, "Sojasun 🌿")
-            st.session_state.page = "jeu"
-            st.rerun()
 
-    # --- CATEGORIE EXISTANTE ---
-    if st.button("Jeux de société 🎲 (10 au hasard)", use_container_width=True, type="primary"):
-        items_df = charger_liste_items("bga_jeux_complet.csv", selection_aleatoire=True) 
-        if items_df is not None:
-            initialiser_jeu(items_df, "Jeux de société 🎲")
-            st.session_state.page = "jeu"
-            st.rerun()
+    # On parcourt le dictionnaire pour créer les boutons automatiquement
+    for nom, fichier in CATEGORIES.items():
+        if st.button(nom, use_container_width=True, type="primary"):
+            demarrer_partie(fichier, nom)
 
 def afficher_page_jeu():
     """Affiche l'interface du jeu (classement)."""
@@ -211,8 +222,6 @@ def afficher_page_jeu():
         
         st.header(f"Placez cet item :")
         
-        # --- MODIFICATION ICI ---
-        
         # Charger et redimensionner l'image, cela retourne des bytes PNG ou l'URL
         image_data_or_url = charger_et_redimensionner_image(item_actuel['ImageURL'], max_hauteur=300) # Hauteur max ajustée à 300px pour tester
         
@@ -227,8 +236,6 @@ def afficher_page_jeu():
         # Si c'est l'URL (en cas d'échec de redimensionnement), Streamlit la gérera comme avant
         else: 
             st.image(image_data_or_url, width=MAX_DISPLAY_WIDTH) # Utilisez width ici aussi
-
-        # --- FIN MODIFICATION ---
         
         st.title(f"{item_actuel['Item']}")
         
