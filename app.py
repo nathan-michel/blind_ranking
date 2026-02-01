@@ -16,7 +16,7 @@ aujourdhui = datetime.date.today()
 graine_du_jour = int(aujourdhui.strftime('%Y%m%d'))
 
 # Configuration de l'application
-st.set_page_config(page_title="Blind Ranker Custom", layout="centered")
+st.set_page_config(page_title="BLIND RANKING CLUB MARRAKECH", layout="centered")
 
 # --- NOUVELLE FONCTION ---
 @st.cache_data
@@ -51,40 +51,84 @@ def charger_et_redimensionner_image(url, max_hauteur=400):
 # --- FONCTIONS HELPERS (Génération de résultat) ---
 
 def generer_texte_classement(slots):
-    """Génère une chaîne de caractères simple pour le classement."""
-    lignes = [f"Mon Classement - {st.session_state.categorie_active}\n", "--------------------------\n"]
+    """Génère un texte de partage élégant."""
+    date_str = datetime.date.today().strftime('%d/%m/%Y')
+    categorie = st.session_state.categorie_active
+    
+    # Header personnalisé si c'est le Daily
+    if "Daily" in categorie:
+        txt = f"🏆 **BLIND RANKING DAILY** 🏆\n📅 Défi du {date_str}\n\n"
+    else:
+        txt = f"🏆 **BLIND RANKING** 🏆\n📂 Catégorie : {categorie}\n\n"
+    
     for i in range(1, 11):
-        lignes.append(f"{i}. {slots[i]['Item']}\n") 
-    return "".join(lignes)
+        txt += f"{i}. {slots[i]['Item']}\n"
+    
+    txt += "\n🎮 Joue toi aussi sur : [Ton Lien Streamlit]"
+    return txt
 
 def generer_image_classement(slots):
-    """Génère une image PNG du classement."""
-    W, H = 800, 600
-    BG_COLOR = "white"
-    TEXT_COLOR = "black"
-    PADDING = 40
-    FONT_PATH = "DejaVuSans.ttf" 
-
-    img = Image.new('RGB', (W, H), color=BG_COLOR)
+    """Génère une carte de score au look professionnel."""
+    W, H = 800, 930 # Format vertical plus moderne
+    PRIMARY_COLOR = "#1E1E2E" # Bleu nuit profond
+    CARD_COLOR = "#FFFFFF"     # Blanc pur pour les cartouches
+    ACCENT_COLOR = "#FF4B4B"   # Rouge corail pour le badge
+    TEXT_MAIN = "#1E1E2E"
+    TEXT_SUB = "#585B70"
+    
+    img = Image.new('RGB', (W, H), color="#F2F4F7")
     draw = ImageDraw.Draw(img)
 
     try:
-        font_titre = ImageFont.truetype(FONT_PATH, size=40)
-        font_ligne = ImageFont.truetype(FONT_PATH, size=30)
-    except IOError:
-        st.error(f"Erreur : Fichier police '{FONT_PATH}' introuvable. Les accents/émojis ne s'afficheront pas.")
-        font_titre = ImageFont.load_default()
-        font_ligne = ImageFont.load_default()
+        font_big = ImageFont.truetype("DejaVuSans.ttf", 42)
+        font_med = ImageFont.truetype("DejaVuSans.ttf", 28)
+        font_bold = ImageFont.truetype("DejaVuSans.ttf", 32)
+    except:
+        font_big = ImageFont.load_default()
+        font_med = ImageFont.load_default()
+        font_bold = ImageFont.load_default()
 
-    titre = f"Mon Classement - {st.session_state.categorie_active}"
-    draw.text((PADDING, PADDING), titre, fill=TEXT_COLOR, font=font_titre)
+    # --- HEADER ---
+    # Dessin d'un bandeau supérieur foncé
+    draw.rectangle([0, 0, W, 180], fill=PRIMARY_COLOR)
+    
+    titre = "CLASSEMENT FINAL"
+    draw.text((40, 45), titre, fill="white", font=font_big)
+    
+    # Sous-titre (Catégorie)
+    cat_name = st.session_state.categorie_active.split("📅")[0].strip()
+    draw.text((40, 105), cat_name, fill="#BAC2DE", font=font_med)
 
-    y = PADDING + 80
+    # --- BADGE DAILY ---
+    if "Daily" in st.session_state.categorie_active:
+        date_str = datetime.date.today().strftime('%d/%m/%Y')
+        # Dessin d'un badge arrondi (rectangle + texte)
+        badge_rect = [W-220, 45, W-40, 135]
+        draw.rounded_rectangle(badge_rect, radius=15, fill=ACCENT_COLOR)
+        draw.text((W-195, 60), "DAILY", fill="white", font=font_med)
+        draw.text((W-205, 95), date_str, fill="white", font=ImageFont.truetype("DejaVuSans.ttf", 22))
+
+    # --- LISTE DES ITEMS (Cartouches) ---
+    y_start = 220
     for i in range(1, 11):
-        texte_ligne = f"{i}. {slots[i]['Item']}" 
-        draw.text((PADDING, y), texte_ligne, fill=TEXT_COLOR, font=font_ligne)
-        y += 40 
+        # Fond du cartouche de ligne
+        rect = [40, y_start, W-40, y_start + 55]
+        draw.rounded_rectangle(rect, radius=10, fill=CARD_COLOR, outline="#D1D5DB", width=1)
         
+        # Numéro
+        color_num = TEXT_SUB
+        draw.text((60, y_start + 12), f"{i}.", fill=color_num, font=font_bold)
+        
+        # Texte de l'item
+        item_text = slots[i]['Item']
+        if len(item_text) > 40: item_text = item_text[:37] + "..."
+        draw.text((120, y_start + 12), item_text, fill=TEXT_MAIN, font=font_med)
+        
+        y_start += 65
+
+    # --- FOOTER ---
+    draw.text((W/2 - 100, H - 40), "Généré par Blind Ranking CLUB MARRAKECH", fill=TEXT_SUB, font=ImageFont.truetype("DejaVuSans.ttf", 18))
+
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
@@ -161,7 +205,7 @@ def placer_item(numero_place):
 
 def afficher_page_selection():
 
-    st.title("Mon Blind Ranker Perso ! 🏆")
+    st.title("BLIND RANKING CLUB MARRAKECH ! 🏆")
     
     # --- SECTION DAILY ---
     st.subheader("📅 Le Défi du Jour")
